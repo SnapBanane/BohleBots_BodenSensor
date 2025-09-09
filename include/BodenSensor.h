@@ -28,7 +28,7 @@ public:
   static void initSensorPositions();
   static void setupPins();
   static void setMuxChannel(byte channel);
-  static std::array<int, 32> getSensorDataArr();
+  static std::array<int, 32> getSensorDataArr(int _delay);
   static std::vector<int> getActiveIndicesArr(const std::array<int, 32>& sensorData);
   static void computeClosestLineToCenter(const std::vector<int>& activeIndices);
 };

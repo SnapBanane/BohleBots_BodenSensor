@@ -43,8 +43,10 @@ void BodenSensor::setMuxChannel(const byte channel)
   }
 }
 
-std::array<int, 32> BodenSensor::getSensorDataArr()
+std::array<int, 32> BodenSensor::getSensorDataArr(int _delay)
 {
+  digitalWrite(2, HIGH);
+
   std::array<int, 32> sensorData = {};
   sensorData.fill(0);
 
@@ -55,6 +57,8 @@ std::array<int, 32> BodenSensor::getSensorDataArr()
       sensorData[j*8+i] = analogRead(outputPins[j]);
     }
   }
+  delay(_delay);
+  digitalWrite(2, LOW);
 
   return sensorData;
 }

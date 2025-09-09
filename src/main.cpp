@@ -19,10 +19,8 @@ void setup() {
 
 void loop() {
 
-  digitalWrite(2, HIGH);
-  const std::array<int, 32> sensorData = BodenSensor::getSensorDataArr();
-  delay(10);
-  digitalWrite(2, LOW);
+  int delay = 20; // delay in ms
+  const std::array<int, 32> sensorData = BodenSensor::getSensorDataArr(delay);
 
   const std::vector<int> activeIndices = BodenSensor::getActiveIndicesArr(sensorData);
   BodenSensor::computeClosestLineToCenter(activeIndices);
