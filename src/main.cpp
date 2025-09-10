@@ -2,6 +2,8 @@
 #include "BodenSensor.h"
 #include "config.h"
 
+
+
 void setup() {
   Serial.begin(115200);
   // Setup all the Pins with correct modes
@@ -19,18 +21,22 @@ void setup() {
 
 void loop() {
 
-  int delay = 20; // delay in ms
-  const std::array<int, 32> sensorData = BodenSensor::getSensorDataArr(delay);
+  BodenSensor::updateLine();
 
-  const std::vector<int> activeIndices = BodenSensor::getActiveIndicesArr(sensorData);
-  BodenSensor::computeClosestLineToCenter(activeIndices);
+  const std::array<int, 32> sensorData = BodenSensor::getSensorDataArr(1);
 
-  for (const auto i : activeIndices) {
+  for (const std::vector<int> activeIndices = BodenSensor::getActiveIndicesArr(sensorData); const auto i : activeIndices) {
     Serial.print(i);
     Serial.print(",");
   }
   Serial.print("|");
-  Serial.print(BodenSensor::line.dist);
+  /*
+  Serial.print(BodenSensor::line.progress);
+  Serial.print(",");
+  Serial.print(BodenSensor::line.rot);
+  Serial.print(",");
+  */
+  Serial.print(BodenSensor::line.percent);
   Serial.print(",");
   Serial.print(BodenSensor::line.rot);
   Serial.println();

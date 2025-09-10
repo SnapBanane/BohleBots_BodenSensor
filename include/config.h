@@ -12,6 +12,6 @@ constexpr std::array<byte, 4> outputPins = {26, 33, 32, 25}; // analog input pin
 constexpr byte ledPin = 2; // led pins
 constexpr std::array CHANNEL_ORDER = {4, 6, 7, 5, 3, 0, 1, 2}; // order to read the channels cause the physical layout is cursed
 
-constexpr int THRESHOLD = 200; // sensor threshold for active state
+constexpr int THRESHOLD = 100; // sensor threshold for active state
 
 #endif //BODENSENSOR_CONFIG_H

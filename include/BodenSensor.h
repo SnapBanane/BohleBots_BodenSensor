@@ -17,7 +17,9 @@ public:
   struct Line
   {
     double rot;
-    double dist;
+    double progress;
+    double percent;
+    bool crossedMid;
   };
 
   // variables
@@ -30,7 +32,8 @@ public:
   static void setMuxChannel(byte channel);
   static std::array<int, 32> getSensorDataArr(int _delay);
   static std::vector<int> getActiveIndicesArr(const std::array<int, 32>& sensorData);
-  static void computeClosestLineToCenter(const std::vector<int>& activeIndices);
+  static void computeClosestLineToCenter();
+  static void updateLine();
 };
 
 
