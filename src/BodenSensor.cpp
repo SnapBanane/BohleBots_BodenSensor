@@ -43,7 +43,7 @@ void BodenSensor::setMuxChannel(const byte channel)
   }
 }
 
-std::array<int, 32> BodenSensor::getSensorDataArr(int _delay)
+std::array<int, 32> BodenSensor::getSensorDataArr(const int _delay)
 {
   digitalWrite(2, HIGH);
 
