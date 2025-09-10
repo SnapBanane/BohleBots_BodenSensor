@@ -129,89 +129,59 @@ void BodenSensor::computeClosestLineToCenter() {
 
 void BodenSensor::updateLine() {
   static bool firstRun = true;
-  static double smoothedRot = 0.0;
-  static int stableCount = 0;
-  static bool pendingCross = false;
-  static double crossCheckRot = 0.0;
-
-  const double SMOOTHING_FACTOR = 0.3; // Smoothing für Rotation
-  const double CROSS_THRESHOLD = 2.61799; // 150° für Kreuzungserkennung
-  const int STABILITY_REQUIRED = 3; // Anzahl stabile Messungen vor Kreuzung
+  static int runCount = 0;
 
   computeClosestLineToCenter();
 
+  // Reset wenn keine Linie erkannt
   if (line.progress < 0) {
-    // Reset nur bei längerer Pause
-    static int noLineCount = 0;
-    noLineCount++;
-    if (noLineCount > 5) { // Reset erst nach 5 Zyklen ohne Linie
-      crossedMid = false;
-      lastRot = 0.0;
-      firstRun = true;
-      smoothedRot = 0.0;
-      stableCount = 0;
-      pendingCross = false;
-      noLineCount = 0;
-    }
+    crossedMid = false;
+    lastRot = 0.0;
+    firstRun = true;
     line.percent = -1.0;
-    line.crossedMid = crossedMid;
+    if (runCount > 5) {
+      line.crossedMid = false;
+    }
+    runCount++;
     return;
   }
+  runCount = 0;
 
-  // Smoothing der Rotation
-  if (firstRun) {
-    smoothedRot = line.rot;
-    firstRun = false;
-  } else {
-    // Smooth nur wenn Änderung < 90° (normale Bewegung)
-    double deltaRot = std::fabs(line.rot - smoothedRot);
-    if (deltaRot > M_PI) deltaRot = 2 * M_PI - deltaRot;
+  // Check für plötzliche Rotation (Linienübergang)
+  if (!firstRun) {
+    double deltaRot = std::fabs(line.rot - lastRot);
+    if (deltaRot > M_PI) deltaRot = 2 * M_PI - deltaRot; // Normalisiere auf [0, PI]
 
-    if (deltaRot < M_PI_2) { // < 90° = normale Bewegung
-      smoothedRot = smoothedRot * (1.0 - SMOOTHING_FACTOR) + line.rot * SMOOTHING_FACTOR;
-      stableCount++;
-    } else {
-      // Große Änderung erkannt - prüfe auf Kreuzung
-      if (deltaRot > CROSS_THRESHOLD && stableCount >= STABILITY_REQUIRED) {
-        if (!pendingCross) {
-          pendingCross = true;
-          crossCheckRot = line.rot;
-        } else {
-          // Bestätige Kreuzung wenn weiterhin große Differenz
-          double confirmDelta = std::fabs(line.rot - crossCheckRot);
-          if (confirmDelta < M_PI_4) { // < 45° = bestätigt
-            crossedMid = !crossedMid;
-            smoothedRot = line.rot;
-            pendingCross = false;
-            stableCount = 0;
-          }
-        }
-      }
+    if (deltaRot > 2.61799) { // >150° = Linienübergang erkannt
+      crossedMid = true;
     }
   }
+  firstRun = false;
 
-  // Verwende geglättete Rotation für Ausgabe
-  double outputRot = smoothedRot;
+  // Wenn Linie gekreuzt wurde, rotiere alle zukünftigen Rotationen um 180°
   if (crossedMid) {
-    outputRot += M_PI;
-    if (outputRot > M_PI) outputRot -= 2 * M_PI;
-    if (outputRot < -M_PI) outputRot += 2 * M_PI;
+    line.rot += M_PI;
+    if (line.rot > M_PI) line.rot -= 2 * M_PI;
+    if (line.rot < -M_PI) line.rot += 2 * M_PI;
   }
 
-  line.rot = outputRot;
-  lastRot = outputRot;
+  lastRot = line.rot;
 
-  // Progress Mapping wie vorher
+  // Mappe progress: vor Kreuzung 0-0.5, nach Kreuzung 0.5-1.0
   double mappedProgress;
   if (!crossedMid) {
+    // Vor Kreuzung: 1.0 -> 0.0, 0.0 -> 0.5
     mappedProgress = (1.0 - line.progress) * 0.5;
   } else {
+    // Nach Kreuzung: 0.0 -> 0.5, 1.0 -> 1.0
     mappedProgress = 0.5 + line.progress * 0.5;
   }
 
+  // Berechne Prozent (0-100)
   line.percent = mappedProgress * 100.0;
   if (line.percent > 100.0) line.percent = 100.0;
   if (line.percent < 0.0) line.percent = 0.0;
 
+  // Speichere Status
   line.crossedMid = crossedMid;
 }
