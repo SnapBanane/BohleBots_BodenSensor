@@ -82,13 +82,9 @@ std::vector<int> BodenSensor::getActiveIndicesArr(const std::array<int, 32>& sen
 void BodenSensor::computeClosestLineToCenter() {
   constexpr int _delay = 50; // delay in ms
   const std::array<int, 32> sensorData = BodenSensor::getSensorDataArr(_delay);
-
   const std::vector<int> activeSensorIndices = BodenSensor::getActiveIndicesArr(sensorData);
 
-  std::array<point, 2> bestPair = {};
-  double minDist = std::numeric_limits<double>::max();
-
-  if (activeSensorIndices.size() < 1) { // if no sensors active return -1 we can later detect that
+  if (activeSensorIndices.size() < 1) {
     line.progress = -1.0;
     line.rot = 0.0;
     lastDist = -1.0;
@@ -97,32 +93,84 @@ void BodenSensor::computeClosestLineToCenter() {
   }
 
   if (activeSensorIndices.size() == 1) {
-    line.progress = 1.0;
-    const double x = sensorPositions[activeSensorIndices[0]].x;
-    const double y = sensorPositions[activeSensorIndices[0]].y;
-    line.rot = std::atan2(y, x) + M_PI_2;
+    const int idx = activeSensorIndices[0];
+    const double x = sensorPositions[idx].x;
+    const double y = sensorPositions[idx].y;
+
+    // Compute normal perpendicular to the radius vector
+    double mag = std::sqrt(x*x + y*y);
+    if (mag == 0.0) mag = 1.0; // prevent divide by zero
+    double normalX = -y / mag;
+    double normalY = x / mag;
+
+    // Signed distance from center (0,0) to the line perpendicular to radius through sensor
+    double signedDist = 0.0 * normalX + 0.0 * normalY; // still 0 for center, but keeps sign logic consistent
+    // Here signedDist will be used for mapping percent later
+
+    // Map -1..1 -> 0..1 (for percent)
+    double mappedDist = (-signedDist + 1.0) / 2.0;
+    mappedDist = std::max(0.0, std::min(1.0, mappedDist));
+
+    line.progress = mappedDist;
+    line.rot = std::atan2(y, x); // vector from center to sensor
     return;
   }
 
-  for (auto i = 0; i < activeSensorIndices.size(); ++i) {
-    for (auto j = i + 1; j < activeSensorIndices.size(); ++j) {
+
+  // Multiple sensors - find best pair with maximum separation
+  std::array<point, 2> bestPair = {};
+  double bestSignedDist = 0.0;
+  double bestRot = 0.0;
+  int maxIndexDistance = 0;
+
+  for (size_t i = 0; i < activeSensorIndices.size(); ++i) {
+    for (size_t j = i + 1; j < activeSensorIndices.size(); ++j) {
       const int p1 = activeSensorIndices[i];
       const int p2 = activeSensorIndices[j];
-      const double mx = (sensorPositions[p1].x + sensorPositions[p2].x) / 2.0;
-      const double my = (sensorPositions[p1].y + sensorPositions[p2].y) / 2.0;
 
-      if (const double distance = std::sqrt(mx * mx + my * my); distance < minDist) {
-        minDist = distance;
-        bestPair[0] = sensorPositions[p1];
-        bestPair[1] = sensorPositions[p2];
+      // Calculate index distance (considering circular array)
+      int indexDist = std::abs(p2 - p1);
+      if (indexDist > 16) indexDist = 32 - indexDist; // wrap around for circular array
 
-        // set line properties
-        line.progress = minDist; // will get remapped later
-        line.rot = std::atan2(my, mx);
+      // Choose pair with maximum index distance
+      if (indexDist > maxIndexDistance) {
+        maxIndexDistance = indexDist;
+
+        // Line endpoints
+        point lineP1 = sensorPositions[p1];
+        point lineP2 = sensorPositions[p2];
+
+        // Calculate signed distance from robot center (0,0) to the line between p1 and p2
+        double dx = lineP2.x - lineP1.x;
+        double dy = lineP2.y - lineP1.y;
+
+        // Project robot center onto line
+        double t = (0 - lineP1.x) * dx + (0 - lineP1.y) * dy;
+        t /= (dx * dx + dy * dy);
+        point closest = {lineP1.x + t * dx, lineP1.y + t * dy};
+
+        // Calculate signed distance using line normal
+        double mag = std::sqrt(dx*dx + dy*dy);
+        double signedDist = 0.0;
+        if (mag > 0) {
+          double normalX = -dy / mag;  // perpendicular to line direction
+          double normalY = dx / mag;
+          signedDist = (0 - lineP1.x) * normalX + (0 - lineP1.y) * normalY;
+        }
+
+        // Map signed distance to [0, 1] range
+        // left side (-1) → 1.0, center (0) → 0.5, right side (+1) → 0.0
+        bestSignedDist = (-signedDist + 1.0) / 2.0;
+        bestSignedDist = std::max(0.0, std::min(1.0, bestSignedDist));
+
+        // Vector from center to closest point on line
+        bestRot = std::atan2(closest.y, closest.x);
       }
     }
   }
 
+  line.progress = bestSignedDist;
+  line.rot = bestRot;
   lastDist = line.progress;
   lastRot = line.rot;
 }
@@ -135,12 +183,12 @@ void BodenSensor::updateLine() {
 
   // Reset wenn keine Linie erkannt
   if (line.progress < 0) {
-    crossedMid = false;
     lastRot = 0.0;
     firstRun = true;
     line.percent = -1.0;
     if (runCount > 5) {
       line.crossedMid = false;
+      crossedMid = false;
     }
     runCount++;
     return;
