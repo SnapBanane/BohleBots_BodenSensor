@@ -30,19 +30,27 @@ void loop() {
     Serial.print(i);
     Serial.print(",");
   }
-  Serial.print("|");
+  Serial.println();
 
   Serial.print(BodenSensor::line.progress);
   Serial.print(",");
   Serial.print(BodenSensor::line.rot);
   Serial.print(",");
   */
-  Serial.print(BodenSensor::line.percent);
+  Serial.print(BodenSensor::line.progress);
   Serial.print(",");
   Serial.print(BodenSensor::line.rot);
   Serial.print(",");
   Serial.print(BodenSensor::line.crossedMid);
   Serial.println();
+  /*
+  for (int i = 0; i < sensorData.size(); i++)
+  {
+    Serial.print(sensorData[i]);
+    Serial.print(",");
+  }
+  Serial.println();
+  */
 
   delay(1);
 }
