@@ -1,8 +1,7 @@
 #include <Arduino.h>
 #include "BodenSensor.h"
 #include "config.h"
-
-
+#include <chrono>
 
 void setup() {
   Serial.begin(115200);
@@ -20,36 +19,21 @@ void setup() {
 }
 
 void loop() {
+  // const auto startTime = std::chrono::high_resolution_clock::now();
 
   BodenSensor::updateLine();
 
-  const std::array<int, 32> sensorData = BodenSensor::getSensorDataArr(1);
-
   /*
-  for (const std::vector<int> activeIndices = BodenSensor::getActiveIndicesArr(sensorData); const auto i : activeIndices) {
-    Serial.print(i);
-    Serial.print(",");
-  }
-  Serial.println();
-
-  Serial.print(BodenSensor::line.progress);
-  Serial.print(",");
-  Serial.print(BodenSensor::line.rot);
-  Serial.print(",");
-  */
   Serial.print(BodenSensor::line.progress);
   Serial.print(",");
   Serial.print(BodenSensor::line.rot);
   Serial.print(",");
   Serial.print(BodenSensor::line.crossedMid);
   Serial.println();
-  /*
-  for (int i = 0; i < sensorData.size(); i++)
-  {
-    Serial.print(sensorData[i]);
-    Serial.print(",");
-  }
-  Serial.println();
+
+  const auto endTime = std::chrono::high_resolution_clock::now();
+  const auto duration = std::chrono::duration_cast<std::chrono::microseconds>(endTime - startTime);
+  Serial.println(duration.count());
   */
 
   delay(1);

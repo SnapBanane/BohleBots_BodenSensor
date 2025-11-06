@@ -9,7 +9,6 @@
 #include <vector>
 #include <cmath>
 
-// Define variables
 std::array<BodenSensor::point, 32> BodenSensor::sensorPositions;
 BodenSensor::Line BodenSensor::line = {};
 
@@ -63,7 +62,7 @@ std::array<int, 32> BodenSensor::getSensorDataArr(const int _delay)
     }
   }
   delay(_delay);
-  digitalWrite(2, LOW);
+  // digitalWrite(2, LOW);
 
   return sensorData;
 }
@@ -88,17 +87,17 @@ double unwrapAngle(double current, double previous) {
 }
 
 void BodenSensor::computeClosestLineToCenter() {
-  constexpr int _delay = 50; // delay in ms
+  constexpr int _delay = 0; // delay in ms
   const std::array<int, 32> sensorData = BodenSensor::getSensorDataArr(_delay);
 
   const std::vector<int> activeSensorIndices = BodenSensor::getActiveIndicesArr(sensorData);
 
-  std::array<point, 2> bestPair = {};
-  double minDist = std::numeric_limits<double>::max();
+  int maxIndexDist = 0;
 
   if (activeSensorIndices.size() < 1) { // if no sensors active return -1 we can later detect that
     line.progress = -1.0;
-    line.rot = 0.0;
+    line.rot = -1.0;
+    line.crossedMid = false;
     lastDist = -1.0;
     lastRot = 0.0;
     return;
@@ -112,31 +111,67 @@ void BodenSensor::computeClosestLineToCenter() {
     return;
   }
 
+  int bestP1 = -1, bestP2 = -1; // init empty
+
   for (auto i = 0; i < activeSensorIndices.size(); ++i) {
     for (auto j = i + 1; j < activeSensorIndices.size(); ++j) {
       const int p1 = activeSensorIndices[i];
       const int p2 = activeSensorIndices[j];
-      const double mx = (sensorPositions[p1].x + sensorPositions[p2].x) / 2.0;
-      const double my = (sensorPositions[p1].y + sensorPositions[p2].y) / 2.0;
 
-      if (const double distance = std::sqrt(mx * mx + my * my); distance < minDist) {
-        minDist = distance;
-        bestPair[0] = sensorPositions[p1];
-        bestPair[1] = sensorPositions[p2];
+      int indexDist = std::abs(p2 - p1);
+      indexDist = std::min(indexDist, 32 - indexDist);
 
-        // set line properties
-        line.progress = minDist; // will get remapped later
-        double angle = std::atan2(my, mx);
-        line.rot = angle;
-        // line.rot = angle;
+      if (indexDist > 16) continue;
+
+      if (indexDist > maxIndexDist) {
+        maxIndexDist = indexDist;
+        line.progress = static_cast<double>(indexDist);
+        bestP1 = p1;
+        bestP2 = p2;
       }
     }
   }
 
-  lastDist = line.progress;
-  lastRot = line.rot;
+  if (bestP1 != -1 && bestP2 != -1) {
+    double angle1 = atan2(sensorPositions[bestP1].x, sensorPositions[bestP1].y) * 180.0 / M_PI;
+    double angle2 = atan2(sensorPositions[bestP2].x, sensorPositions[bestP2].y) * 180.0 / M_PI;
+
+    if (angle1 < 0) angle1 += 360.0;
+    if (angle2 < 0) angle2 += 360.0;
+
+    // angle rotation diff
+    double diff = angle1 - angle2;
+
+    if (diff > 180.0) diff -= 360.0;
+    if (diff < -180.0) diff += 360.0;
+
+    line.rot = angle2 + diff / 2.0;
+
+    line.rot -= 45.0;
+
+    if (line.rot < 0) line.rot += 360.0;
+    if (line.rot >= 360.0) line.rot -= 360.0;
+  }
 }
 
 void BodenSensor::updateLine() {
+  const int lastRotSave = static_cast<int>(line.rot);
+
   computeClosestLineToCenter();
+
+  if (lastRotSave == -1) { // catch line not detected to prevent insta jump
+    line.crossedMid = false;
+    return;
+  }
+  static boolean state = false;
+
+  const double diff = lastRotSave - static_cast<int>(line.rot);
+
+  if (diff > 120.0) line.crossedMid = !state; state = !state;
+  if (diff < -120.0) line.crossedMid = !state; state = !state;
+
+  if (line.crossedMid) {
+    line.progress = 32 - line.progress;
+  }
+
 }
