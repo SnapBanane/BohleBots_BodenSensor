@@ -5,6 +5,7 @@
 #include <Arduino.h>
 #include "../include/BodenSensor.h"
 #include "../include/config.h"
+#include "../include/movingAverage.h"
 #include <array>
 #include <vector>
 #include <cmath>
@@ -12,10 +13,7 @@
 std::array<BodenSensor::point, 32> BodenSensor::sensorPositions;
 BodenSensor::Line BodenSensor::line = {};
 
-static double lastDist = -1.0;
-static double lastRot = 0.0;
-static bool crossedMid = false;
-static bool wasBelowMid = false;
+MovingAverage<10> rotAvg;
 
 void BodenSensor::setupPins()
 {
@@ -28,6 +26,7 @@ void BodenSensor::setupPins()
   }
 
   pinMode(2, OUTPUT);
+  digitalWrite(2, HIGH); // enable led ring
 }
 
 void BodenSensor::initSensorPositions()
@@ -49,7 +48,7 @@ void BodenSensor::setMuxChannel(const byte channel)
 
 std::array<int, 32> BodenSensor::getSensorDataArr(const int _delay)
 {
-  digitalWrite(2, HIGH);
+  // digitalWrite(2, HIGH);
 
   std::array<int, 32> sensorData = {};
   sensorData.fill(0);
@@ -94,12 +93,11 @@ void BodenSensor::computeClosestLineToCenter() {
 
   int maxIndexDist = 0;
 
-  if (activeSensorIndices.size() < 1) { // if no sensors active return -1 we can later detect that
+  if (activeSensorIndices.size() < 2) { // if no sensors active return -1 we can later detect that
     line.progress = -1.0;
     line.rot = -1.0;
     line.crossedMid = false;
-    lastDist = -1.0;
-    lastRot = 0.0;
+    rotAvg.reset();
     return;
   }
 
@@ -125,7 +123,7 @@ void BodenSensor::computeClosestLineToCenter() {
 
       if (indexDist > maxIndexDist) {
         maxIndexDist = indexDist;
-        line.progress = static_cast<double>(indexDist);
+        line.progress = indexDist;
         bestP1 = p1;
         bestP2 = p2;
       }
@@ -145,7 +143,7 @@ void BodenSensor::computeClosestLineToCenter() {
     if (diff > 180.0) diff -= 360.0;
     if (diff < -180.0) diff += 360.0;
 
-    line.rot = angle2 + diff / 2.0;
+    line.rot = static_cast<float>(static_cast<float>(angle2) + diff / 2.0);
 
     line.rot -= 45.0;
 
@@ -155,7 +153,7 @@ void BodenSensor::computeClosestLineToCenter() {
 }
 
 void BodenSensor::updateLine() {
-  const int lastRotSave = static_cast<int>(line.rot);
+  const double lastRotSave = line.rot;
 
   computeClosestLineToCenter();
 
@@ -165,13 +163,17 @@ void BodenSensor::updateLine() {
   }
   static boolean state = false;
 
-  const double diff = lastRotSave - static_cast<int>(line.rot);
+  double diff = lastRotSave - line.rot;
 
-  if (diff > 120.0) line.crossedMid = !state; state = !state;
-  if (diff < -120.0) line.crossedMid = !state; state = !state;
+  while (diff > 180) diff -= 360;
+  while (diff < -180) diff += 360;
+
+  if (std::abs(diff) > 120) { state = !state;  line.crossedMid = state;}
 
   if (line.crossedMid) {
     line.progress = 32 - line.progress;
   }
+
+  //rotAvg.add(line.rot);
 
 }

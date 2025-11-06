@@ -30,11 +30,11 @@ void loop() {
   Serial.print(",");
   Serial.print(BodenSensor::line.crossedMid);
   Serial.println();
-
-  const auto endTime = std::chrono::high_resolution_clock::now();
-  const auto duration = std::chrono::duration_cast<std::chrono::microseconds>(endTime - startTime);
-  Serial.println(duration.count());
   */
+
+  // const auto endTime = std::chrono::high_resolution_clock::now();
+  // const auto duration = std::chrono::duration_cast<std::chrono::microseconds>(endTime - startTime);
+  // Serial.println(duration.count());
 
   delay(1);
 }
