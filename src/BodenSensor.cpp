@@ -93,7 +93,7 @@ void BodenSensor::computeClosestLineToCenter() {
 
   int maxIndexDist = 0;
 
-  if (activeSensorIndices.size() < 2) { // if no sensors active return -1 we can later detect that
+  if (activeSensorIndices.size() < 1) { // if no sensors active return -1 we can later detect that
     line.progress = -1.0;
     line.rot = -1.0;
     line.crossedMid = false;
@@ -105,7 +105,8 @@ void BodenSensor::computeClosestLineToCenter() {
     line.progress = 1.0;
     const double x = sensorPositions[activeSensorIndices[0]].x;
     const double y = sensorPositions[activeSensorIndices[0]].y;
-    line.rot = std::atan2(y, x) + M_PI_2;
+    line.rot = static_cast<float>(std::atan2(y, x) + M_PI_2) *180.0f / static_cast<float>(M_PI);
+    if (line.rot < 0) line.rot += 360.0f; // untested
     return;
   }
 
