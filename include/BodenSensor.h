@@ -12,6 +12,7 @@ public:
   struct point {
     double x;
     double y;
+    double angle;  // Pre-calculated angle in degrees
   };
 
   struct Line
@@ -26,10 +27,10 @@ public:
 
   static void initSensorPositions();
   static void setupPins();
-  static void setMuxChannel(byte channel);
+  static inline void setMuxChannel(byte channel);
 
   static std::array<int, 32> getSensorDataArr(int _delay);
-  static std::vector<int> getActiveIndicesArr(const std::array<int, 32>& sensorData);
+  static int getActiveIndicesArr(const std::array<int, 32>& sensorData, int* activeIndices);
 
   static void computeClosestLineToCenter();
   static void updateLine();
