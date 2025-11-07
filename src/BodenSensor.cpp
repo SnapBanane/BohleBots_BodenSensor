@@ -36,7 +36,7 @@ void BodenSensor::initSensorPositions()
     sensorPositions[i].x = std::cos(angle);
     sensorPositions[i].y = std::sin(angle);
     // Pre-calculate angle in degrees for later use
-    double angleDeg = std::atan2(sensorPositions[i].x, sensorPositions[i].y) * 180.0 / M_PI;
+    double angleDeg = std::atan2(sensorPositions[i].y, sensorPositions[i].x) * 180.0 / M_PI;
     if (angleDeg < 0) angleDeg += 360.0;
     sensorPositions[i].angle = angleDeg;
   }
@@ -51,7 +51,7 @@ void BodenSensor::setMuxChannel(const byte channel)
 
 std::array<int, 32> BodenSensor::getSensorDataArr(const int _delay)
 {
-  std::array<int, 32> sensorData;
+  std::array<int, 32> sensorData = {};
 
   for (int i = 0; i < 8; i++) {
     setMuxChannel(CHANNEL_ORDER[i]);
@@ -104,13 +104,13 @@ void BodenSensor::computeClosestLineToCenter() {
   int maxIndexDist = 0;
   int bestP1 = -1, bestP2 = -1; // init empty
 
-  // Optimize nested loops with early exit
+  // Optimize nested loops
   for (int i = 0; i < activeCount; ++i) {
     const int p1 = activeIndices[i];
     for (int j = i + 1; j < activeCount; ++j) {
       const int p2 = activeIndices[j];
 
-      int indexDist = p2 - p1;  // p2 > p1 guaranteed
+      int indexDist = std::abs(p2 - p1);
       if (indexDist > 16) {
         indexDist = 32 - indexDist;
       }
@@ -161,7 +161,7 @@ void BodenSensor::updateLine() {
   if (diff > 180.0f) diff -= 360.0f;
   else if (diff < -180.0f) diff += 360.0f;
 
-  if (diff > 120.0f || diff < -120.0f) { 
+  if (std::abs(diff) > 120.0f) { 
     state = !state;  
     line.crossedMid = state;
   }
