@@ -35,9 +35,8 @@ void BodenSensor::initSensorPositions()
     const double angle = 2 * M_PI * i / 32;
     sensorPositions[i].x = std::cos(angle);
     sensorPositions[i].y = std::sin(angle);
-    // Pre-calculate angle in degrees for later use
-    double angleDeg = std::atan2(sensorPositions[i].y, sensorPositions[i].x) * 180.0 / M_PI;
-    if (angleDeg < 0) angleDeg += 360.0;
+    // Pre-calculate angle in degrees for later use (avoid atan2 in hot path)
+    double angleDeg = angle * 180.0 / M_PI;
     sensorPositions[i].angle = angleDeg;
   }
 }
@@ -73,6 +72,7 @@ int BodenSensor::getActiveIndicesArr(const std::array<int, 32>& sensorData, int*
   for (int i = 0; i < 32; ++i) {
     if (sensorData[i] > THRESHOLD) {
       activeIndices[count++] = i;
+      if (count >= 32) break;  // Safety check to prevent buffer overflow
     }
   }
   return count;
@@ -115,7 +115,7 @@ void BodenSensor::computeClosestLineToCenter() {
         indexDist = 32 - indexDist;
       }
 
-      if (indexDist <= 16 && indexDist > maxIndexDist) {
+      if (indexDist > maxIndexDist) {
         maxIndexDist = indexDist;
         line.progress = indexDist;
         bestP1 = p1;
