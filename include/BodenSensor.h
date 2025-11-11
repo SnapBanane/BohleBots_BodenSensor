@@ -22,6 +22,7 @@ private:
     struct Point { // point = Point
         float x;
         float y;
+        float angle;
     };
 
     static std::array<Point, 32> _sensorPositions;

@@ -7,7 +7,7 @@
 #include <Arduino.h>
 
 constexpr std::array<byte, 3> addressPins = {14, 27, 13}; // mux pins
-constexpr std::array<byte, 4> outputPins = {26, 33, 32, 25}; // analog input pins
+constexpr std::array<byte, 4> outputPins = {26, 33, 32, 25};
 
 constexpr byte ledPin = 2; // led pins
 constexpr std::array CHANNEL_ORDER = {4, 6, 7, 5, 3, 0, 1, 2}; // order to read the channels cause the physical layout is cursed

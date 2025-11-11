@@ -30,16 +30,19 @@ void BodenSensor::initSensorPositions()
 {
   for (int i = 0; i < 32; ++i)
   {
-    const double angle = 2 * M_PI * i / 32;
-    _sensorPositions[i].x = static_cast<float>(std::cos(angle));
-    _sensorPositions[i].y = static_cast<float>(std::sin(angle));
+    const auto angle = static_cast<float>(2 * M_PI * i / 32);
+    _sensorPositions[i].x = std::cos(angle);
+    _sensorPositions[i].y = std::sin(angle);
+
+    const auto sensorAngle = static_cast<float>(angle * 180.0 / M_PI);
+    _sensorPositions[i].angle = sensorAngle;
   }
 }
 
 void BodenSensor::setMuxChannel(const byte channel)
 {
-  for (byte i = 0; i < addressPins.size(); i++) {
-    digitalWrite(addressPins[i], (channel >> i) & 0x01);
+  for (std::size_t i = 0; i < addressPins.size(); i++) {
+    digitalWrite(addressPins[i], channel >> i & 0x01);
   }
 }
 
@@ -64,7 +67,7 @@ std::vector<int> BodenSensor::getActiveIndicesArr(const std::array<int, 32>& sen
   std::vector<int> activeIndices;
   for (size_t i = 0; i < sensorData.size(); ++i) {
     if (sensorData[i] > THRESHOLD) {
-      activeIndices.push_back(i);
+      activeIndices.push_back(static_cast<int>(i));
     }
   }
   return activeIndices;
@@ -90,7 +93,7 @@ void BodenSensor::computeClosestLineToCenter() {
 
   int maxIndexDist = 0;
 
-  if (activeSensorIndices.size() < 1) { // if no sensors active return -1 we can later detect that
+  if (activeSensorIndices.empty()) {
     line.progress = -1.0;
     line.rot = -1.0;
     line.crossedMid = false;
@@ -128,19 +131,19 @@ void BodenSensor::computeClosestLineToCenter() {
   }
 
   if (bestP1 != -1 && bestP2 != -1) {
-    double angle1 = atan2(_sensorPositions[bestP1].x, _sensorPositions[bestP1].y) * 180.0 / M_PI;
-    double angle2 = atan2(_sensorPositions[bestP2].x, _sensorPositions[bestP2].y) * 180.0 / M_PI;
+    float angle1 = _sensorPositions[bestP1].angle;
+    float angle2 = _sensorPositions[bestP2].angle;
 
     if (angle1 < 0) angle1 += 360.0;
     if (angle2 < 0) angle2 += 360.0;
 
     // angle rotation diff
-    double diff = angle1 - angle2;
+    float diff = angle1 - angle2;
 
     if (diff > 180.0) diff -= 360.0;
     if (diff < -180.0) diff += 360.0;
 
-    line.rot = static_cast<float>(static_cast<float>(angle2) + diff / 2.0);
+    line.rot = static_cast<float>(angle2 + diff / 2.0);
 
     line.rot -= 45.0;
 
@@ -150,7 +153,7 @@ void BodenSensor::computeClosestLineToCenter() {
 }
 
 void BodenSensor::updateLine() {
-  const double lastRotSave = line.rot;
+  const float lastRotSave = line.rot;
 
   computeClosestLineToCenter();
 
@@ -160,10 +163,10 @@ void BodenSensor::updateLine() {
   }
   static boolean state = false;
 
-  double diff = lastRotSave - line.rot;
+  float diff = lastRotSave - line.rot;
 
-  while (diff > 180) diff -= 360;
-  while (diff < -180) diff += 360;
+  if (diff > 180) diff -= 360.0f;
+  else if (diff < -180) diff += 360.0f;
 
   if (std::abs(diff) > 120) { state = !state;  line.crossedMid = state;}
 
