@@ -5,15 +5,12 @@
 #include <Arduino.h>
 #include "../include/BodenSensor.h"
 #include "../include/config.h"
-#include "../include/movingAverage.h"
 #include <array>
 #include <vector>
 #include <cmath>
 
 std::array<BodenSensor::point, 32> BodenSensor::sensorPositions;
 BodenSensor::Line BodenSensor::line = {};
-
-MovingAverage<10> rotAvg;
 
 void BodenSensor::setupPins()
 {
@@ -34,8 +31,8 @@ void BodenSensor::initSensorPositions()
   for (int i = 0; i < 32; ++i)
   {
     const double angle = 2 * M_PI * i / 32;
-    sensorPositions[i].x = std::cos(angle);
-    sensorPositions[i].y = std::sin(angle);
+    sensorPositions[i].x = static_cast<float>(std::cos(angle));
+    sensorPositions[i].y = static_cast<float>(std::sin(angle));
   }
 }
 
@@ -46,10 +43,8 @@ void BodenSensor::setMuxChannel(const byte channel)
   }
 }
 
-std::array<int, 32> BodenSensor::getSensorDataArr(const int _delay)
+std::array<int, 32> BodenSensor::getSensorDataArr()
 {
-  // digitalWrite(2, HIGH);
-
   std::array<int, 32> sensorData = {};
   sensorData.fill(0);
 
@@ -60,8 +55,6 @@ std::array<int, 32> BodenSensor::getSensorDataArr(const int _delay)
       sensorData[j*8+i] = analogRead(outputPins[j]);
     }
   }
-  delay(_delay);
-  // digitalWrite(2, LOW);
 
   return sensorData;
 }
@@ -77,19 +70,23 @@ std::vector<int> BodenSensor::getActiveIndicesArr(const std::array<int, 32>& sen
   return activeIndices;
 }
 
+void BodenSensor::initSensor() {
+  setupPins();
+  initSensorPositions();
+}
+
 // helper
-double unwrapAngle(double current, double previous) {
-  double diff = current - previous;
+double unwrapAngle(const float current, const float previous) {
+  float diff = current - previous;
   while (diff > M_PI)  diff -= 2 * M_PI;
   while (diff < -M_PI) diff += 2 * M_PI;
   return previous + diff;
 }
 
 void BodenSensor::computeClosestLineToCenter() {
-  constexpr int _delay = 0; // delay in ms
-  const std::array<int, 32> sensorData = BodenSensor::getSensorDataArr(_delay);
+  const std::array<int, 32> sensorData = getSensorDataArr();
 
-  const std::vector<int> activeSensorIndices = BodenSensor::getActiveIndicesArr(sensorData);
+  const std::vector<int> activeSensorIndices = getActiveIndicesArr(sensorData);
 
   int maxIndexDist = 0;
 
@@ -97,7 +94,6 @@ void BodenSensor::computeClosestLineToCenter() {
     line.progress = -1.0;
     line.rot = -1.0;
     line.crossedMid = false;
-    rotAvg.reset();
     return;
   }
 
@@ -174,7 +170,4 @@ void BodenSensor::updateLine() {
   if (line.crossedMid) {
     line.progress = 32 - line.progress;
   }
-
-  //rotAvg.add(line.rot);
-
 }

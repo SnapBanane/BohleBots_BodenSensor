@@ -3,37 +3,40 @@
 
 #ifndef BODENSENSOR_BODENSENSOR_H
 #define BODENSENSOR_BODENSENSOR_H
-#include <Arduino.h>
 
-class BodenSensor
-{
+class BodenSensor {
 public:
+    struct Line {
+        float rot;
+        int progress;
+        bool crossedMid;
+    };
 
-  struct point {
-    double x;
-    double y;
-  };
+    static Line line;
 
-  struct Line
-  {
-    float rot;
-    int progress;
-    bool crossedMid;
-  };
+    static void initSensor();
 
-  static std::array<point, 32> sensorPositions;
-  static Line line;
+    static void updateLine();
 
-  static void initSensorPositions();
-  static void setupPins();
-  static void setMuxChannel(byte channel);
+private:
+    struct Point { // point = Point
+        float x;
+        float y;
+    };
 
-  static std::array<int, 32> getSensorDataArr(int _delay);
-  static std::vector<int> getActiveIndicesArr(const std::array<int, 32>& sensorData);
+    static std::array<Point, 32> _sensorPositions;
 
-  static void computeClosestLineToCenter();
-  static void updateLine();
+    static void initSensorPositions();
+
+    static void setupPins();
+
+    static void setMuxChannel(byte channel);
+
+    static std::array<int, 32> getSensorDataArr();
+
+    static std::vector<int> getActiveIndicesArr(const std::array<int, 32> &sensorData);
+
+    static void computeClosestLineToCenter();
 };
-
 
 #endif //BODENSENSOR_BODENSENSOR_H
