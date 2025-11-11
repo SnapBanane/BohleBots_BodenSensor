@@ -9,7 +9,7 @@
 #include <vector>
 #include <cmath>
 
-std::array<BodenSensor::point, 32> BodenSensor::sensorPositions;
+std::array<BodenSensor::Point, 32> BodenSensor::_sensorPositions;
 BodenSensor::Line BodenSensor::line = {};
 
 void BodenSensor::setupPins()
@@ -31,8 +31,8 @@ void BodenSensor::initSensorPositions()
   for (int i = 0; i < 32; ++i)
   {
     const double angle = 2 * M_PI * i / 32;
-    sensorPositions[i].x = static_cast<float>(std::cos(angle));
-    sensorPositions[i].y = static_cast<float>(std::sin(angle));
+    _sensorPositions[i].x = static_cast<float>(std::cos(angle));
+    _sensorPositions[i].y = static_cast<float>(std::sin(angle));
   }
 }
 
@@ -99,8 +99,8 @@ void BodenSensor::computeClosestLineToCenter() {
 
   if (activeSensorIndices.size() == 1) {
     line.progress = 1.0;
-    const double x = sensorPositions[activeSensorIndices[0]].x;
-    const double y = sensorPositions[activeSensorIndices[0]].y;
+    const double x = _sensorPositions[activeSensorIndices[0]].x;
+    const double y = _sensorPositions[activeSensorIndices[0]].y;
     line.rot = static_cast<float>(std::atan2(y, x) + M_PI_2) *180.0f / static_cast<float>(M_PI);
     if (line.rot < 0) line.rot += 360.0f; // untested
     return;
@@ -128,8 +128,8 @@ void BodenSensor::computeClosestLineToCenter() {
   }
 
   if (bestP1 != -1 && bestP2 != -1) {
-    double angle1 = atan2(sensorPositions[bestP1].x, sensorPositions[bestP1].y) * 180.0 / M_PI;
-    double angle2 = atan2(sensorPositions[bestP2].x, sensorPositions[bestP2].y) * 180.0 / M_PI;
+    double angle1 = atan2(_sensorPositions[bestP1].x, _sensorPositions[bestP1].y) * 180.0 / M_PI;
+    double angle2 = atan2(_sensorPositions[bestP2].x, _sensorPositions[bestP2].y) * 180.0 / M_PI;
 
     if (angle1 < 0) angle1 += 360.0;
     if (angle2 < 0) angle2 += 360.0;

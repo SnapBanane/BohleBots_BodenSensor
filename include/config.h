@@ -14,6 +14,8 @@ constexpr std::array CHANNEL_ORDER = {4, 6, 7, 5, 3, 0, 1, 2}; // order to read 
 
 constexpr int THRESHOLD = 100; // sensor threshold for active state
 
+constexpr int TARGET_ADDRESS = 0x20; // i2c address to send data to
+
 constexpr int I2C_ADRESS = 0x10;
 
 #endif //BODENSENSOR_CONFIG_H
